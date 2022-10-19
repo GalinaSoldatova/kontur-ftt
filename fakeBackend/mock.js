@@ -1,8 +1,10 @@
-const { parse } = require("url");
-const MockAdapter = require("axios-mock-adapter");
-const axios = require("axios");
-const { users } = require("./users");
-const { feedback } = require("./feedbacks");
+/** @format */
+
+const { parse } = require('url');
+const MockAdapter = require('axios-mock-adapter');
+const axios = require('axios');
+const { users } = require('./users');
+const { feedback } = require('./feedbacks');
 
 const instance = axios.create();
 const mock = new MockAdapter(instance);
@@ -20,7 +22,7 @@ mock.onGet(/users.*/).reply(config => {
   try {
     parsed = extractData(config);
   } catch (e) {
-    return [400, { message: "Неверный формат данных" }];
+    return [400, { message: 'Неверный формат данных' }];
   }
 
   if (parsed.ids && parsed.ids.includes) {
@@ -33,7 +35,7 @@ mock.onGet(/users.*/).reply(config => {
     return [200, { users: foundUsers }];
   }
 
-  return [400, { message: "Идентифиактор пользователя не указан" }];
+  return [400, { message: 'Идентификатор пользователя не указан' }];
 });
 
 mock.onGet(/feedback.*/).reply(config => {
@@ -42,11 +44,11 @@ mock.onGet(/feedback.*/).reply(config => {
   try {
     parsed = extractData(config);
   } catch (e) {
-    return [400, { message: "Неверный формат данных" }];
+    return [400, { message: 'Неверный формат данных' }];
   }
 
   if (!parsed.product) {
-    return [400, { message: "Идентификатор продукта не указан" }];
+    return [400, { message: 'Идентификатор продукта не указан' }];
   }
 
   const feedbackForProduct = feedback[parsed.product];
@@ -55,7 +57,7 @@ mock.onGet(/feedback.*/).reply(config => {
     return [200, { feedback: feedbackForProduct }];
   }
 
-  return [404, { message: "Такого продукта не существует" }];
+  return [404, { message: 'Такого продукта не существует' }];
 });
 
 module.exports = { axios: instance };
