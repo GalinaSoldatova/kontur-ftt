@@ -1,7 +1,84 @@
-const { axios } = require("./fakeBackend/mock");
+/** @format */
+
+const { axios } = require('./fakeBackend/mock');
+
+// formatted date from timestamp
+const getFormattedDate = date => {
+  const currentDate = new Date(date);
+  const day = currentDate.getDate();
+  const month = currentDate.getMonth() + 1;
+  const year = currentDate.getFullYear();
+
+  return `${year}-${month}-${day}`;
+};
 
 const getFeedbackByProductViewData = async (product, actualize = false) => {
+  let res;
+  try {
+    // GET /feedback -> fake go to api
+    res = await axios.get(`/feedback?product=${product}`);
+  } catch (err) {
+    // added processing in case 404 returns
+    // for other status codes, a response from the api will be returned
+    if (err.response.status === 404) return { message: 'Такого продукта не существует' };
+    else return err.response.data;
+  }
 
+  const feedbackData = res.data?.feedback;
+  // check data -> 2nd case - there are no reviews
+  if (feedbackData && feedbackData.length === 0) return { message: 'Отзывов пока нет' };
+
+  // get all users ids
+  const allUsersId = [];
+  feedbackData.map(item => allUsersId.push(item.userId));
+
+  let usersRes;
+  try {
+    // GET /users -> fake go to api
+    usersRes = await axios.get('/users', {
+      params: {
+        ids: allUsersId
+      }
+    });
+  } catch (err) {
+    return err.response.data;
+  }
+
+  // sort feedback data
+  const sortFeedbackData = feedbackData.sort((a, b) => b.date - a.date);
+
+  // formatted users info
+  const usersData = usersRes.data?.users;
+  const users = usersData.reduce((prev, user) => {
+    return {
+      ...prev,
+      [user.id]: `${user.name} (${user.email})`
+    };
+  }, {});
+
+  const lastFeedbackUserIds = [];
+
+  const feedback = sortFeedbackData.reduce((prev, item) => {
+    if (actualize) {
+      // check if the user's review has been encountered
+      if (lastFeedbackUserIds.includes(item.userId)) {
+        return prev;
+      }
+      lastFeedbackUserIds.push(item.userId);
+    }
+
+    const review = {
+      message: item.message,
+      date: getFormattedDate(item.date),
+      user: users[item.userId]
+    };
+    return [...prev, review];
+  }, []);
+
+  // reverse list of feedback
+  feedback.reverse();
+
+  return { feedback };
 };
 
 module.exports = { getFeedbackByProductViewData };
