@@ -1,5 +1,6 @@
 /** @format */
 
+const { feedback } = require('./fakeBackend/feedbacks');
 const { axios } = require('./fakeBackend/mock');
 
 // formatted date from timestamp
@@ -10,6 +11,32 @@ const getFormattedDate = date => {
   const year = currentDate.getFullYear();
 
   return `${year}-${month}-${day}`;
+};
+
+// get users data
+const getUsersByFeedbackUsersIds = async feedbackUsersIds => {
+  let usersRes;
+  try {
+    // GET /users -> fake go to api
+    usersRes = await axios.get('/users', {
+      params: {
+        ids: feedbackUsersIds
+      }
+    });
+  } catch (err) {
+    return err.response.data;
+  }
+
+  // formatted users info
+  const usersData = usersRes.data?.users;
+  const users = usersData.reduce((prev, user) => {
+    return {
+      ...prev,
+      [user.id]: `${user.name} (${user.email})`
+    };
+  }, {});
+
+  return users;
 };
 
 const getFeedbackByProductViewData = async (product, actualize = false) => {
@@ -32,32 +59,13 @@ const getFeedbackByProductViewData = async (product, actualize = false) => {
   const allUsersId = [];
   feedbackData.map(item => allUsersId.push(item.userId));
 
-  let usersRes;
-  try {
-    // GET /users -> fake go to api
-    usersRes = await axios.get('/users', {
-      params: {
-        ids: allUsersId
-      }
-    });
-  } catch (err) {
-    return err.response.data;
-  }
+  // get all users
+  const users = await getUsersByFeedbackUsersIds(allUsersId);
 
   // sort feedback data
   const sortFeedbackData = feedbackData.sort((a, b) => b.date - a.date);
 
-  // formatted users info
-  const usersData = usersRes.data?.users;
-  const users = usersData.reduce((prev, user) => {
-    return {
-      ...prev,
-      [user.id]: `${user.name} (${user.email})`
-    };
-  }, {});
-
   const lastFeedbackUserIds = [];
-
   const feedback = sortFeedbackData.reduce((prev, item) => {
     if (actualize) {
       // check if the user's review has been encountered
