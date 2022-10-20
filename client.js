@@ -13,12 +13,22 @@ const getFormattedDate = date => {
   return `${year}-${month}-${day}`;
 };
 
+// formatted users info
+const formattedUsersList = users => {
+  return users.reduce((prev, user) => {
+    return {
+      ...prev,
+      [user.id]: `${user.name} (${user.email})`
+    };
+  }, {});
+};
+
 // get users data
 const getUsersByFeedbackUsersIds = async feedbackUsersIds => {
-  let usersRes;
+  let response;
   try {
     // GET /users -> fake go to api
-    usersRes = await axios.get('/users', {
+    response = await axios.get('/users', {
       params: {
         ids: feedbackUsersIds
       }
@@ -26,38 +36,27 @@ const getUsersByFeedbackUsersIds = async feedbackUsersIds => {
   } catch (err) {
     return err.response.data;
   }
-
-  // formatted users info
-  const usersData = usersRes.data?.users;
-  const users = usersData.reduce((prev, user) => {
-    return {
-      ...prev,
-      [user.id]: `${user.name} (${user.email})`
-    };
-  }, {});
-
-  return users;
+  return formattedUsersList(response.data?.users);
 };
 
 const getFeedbackByProductViewData = async (product, actualize = false) => {
-  let res;
+  let response;
   try {
     // GET /feedback -> fake go to api
-    res = await axios.get(`/feedback?product=${product}`);
+    response = await axios.get(`/feedback?product=${product}`);
   } catch (err) {
     // added processing in case 404 returns
     // for other status codes, a response from the api will be returned
     if (err.response.status === 404) return { message: 'Такого продукта не существует' };
-    else return err.response.data;
+    return err.response.data;
   }
 
-  const feedbackData = res.data?.feedback;
+  const feedbackData = response.data?.feedback;
   // check data -> 2nd case - there are no reviews
-  if (feedbackData && feedbackData.length === 0) return { message: 'Отзывов пока нет' };
+  if (feedbackData?.length === 0) return { message: 'Отзывов пока нет' };
 
-  // get all users ids
-  const allUsersId = [];
-  feedbackData.map(item => allUsersId.push(item.userId));
+  // get all users ids from feedback list
+  const allUsersId = feedbackData.map(item => item.userId);
 
   // get all users
   const users = await getUsersByFeedbackUsersIds(allUsersId);
